@@ -48,7 +48,7 @@ class GeneEmbedding(object):
     :type vector: str
     """
 
-    def __init__(self, embedding_file, dataset, vector="average"):
+    def __init__(self, embedding_file, dataset = None, vector="average"):
         """Constructor method
         """
         if vector not in ("1","2","average"):
@@ -67,7 +67,8 @@ class GeneEmbedding(object):
             secondary_weights = embedding_file.replace(".vec","2.vec")
             self.embeddings = self.read_embedding(secondary_weights)
         self.vector = []
-        self.context = dataset.data
+        if dataset is not None:
+            self.context = dataset.data
         self.embedding_file = embedding_file
         self.vector = []
         self.genes = []
@@ -268,6 +269,51 @@ class GeneEmbedding(object):
         distance = [x[1] for x in sorted_distances]
         df = pandas.DataFrame.from_dict({"Gene":genes, "Similarity":distance})
         return df
+
+    def similarity_matrix(self, genes):
+        """
+        Compute the cosine similarity matrix for a list of genes.
+
+        :param genes: List of genes to compute the similarity matrix.
+        :type genes: list
+        :return: A pandas DataFrame containing the similarity matrix with genes as both columns and index.
+        :rtype: pandas.DataFrame
+        """
+        
+        valid_genes = [gene for gene in genes if gene in self.embeddings]
+        vectors = [self.embeddings[gene] for gene in valid_genes]
+
+        # Compute similarity matrix
+        similarity_df = pd.DataFrame(
+            cosine_similarity(vectors), index=valid_genes, columns=valid_genes
+        )
+
+        return similarity_df
+
+    def cross_similarity_matrix(self, genes1, genes2):
+        """
+        Compute the cosine similarity matrix between two different lists of genes.
+
+        :param genes1: List of gene symbols for the first set of genes.
+        :type genes1: list
+        :param genes2: List of gene symbols for the second set of genes.
+        :type genes2: list
+        :return: A pandas dataframe holding the cosine similarity matrix between two gene lists.
+        :rtype: pd.DataFrame
+        """
+        valid_genes1 = [gene for gene in genes1 if gene in self.embeddings]
+        valid_genes2 = [gene for gene in genes2 if gene in self.embeddings]
+
+        vectors1 = [self.embeddings[gene] for gene in valid_genes1]
+        vectors2 = [self.embeddings[gene] for gene in valid_genes2]
+
+        cross_similarity_matrix = cosine_similarity(vectors1, vectors2)
+
+        cross_similarity_df = pd.DataFrame(
+            cross_similarity_matrix, index=valid_genes1, columns=valid_genes2
+        )
+
+        return cross_similarity_df
 
     def generate_weighted_vector(self, genes, markers, weights):
         vector = []
